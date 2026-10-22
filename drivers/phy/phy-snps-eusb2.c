@@ -611,6 +611,13 @@ static const struct of_device_id snps_eusb2_hsphy_of_match_table[] = {
 		.compatible = "qcom,sm8550-snps-eusb2-phy",
 		.data = &sm8550_snps_eusb2_phy,
 	}, {
+		/*
+		 * SM8475 ("Cape") carries the same SNPS eUSB2 HS PHY IP as
+		 * SM8550; the vendor DT uses the unversioned compatible.
+		 */
+		.compatible = "qcom,usb-snps-eusb2-phy",
+		.data = &sm8550_snps_eusb2_phy,
+	}, {
 		.compatible = "samsung,exynos2200-eusb2-phy",
 		.data = &exynos2200_snps_eusb2_phy,
 	}, {

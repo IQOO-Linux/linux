@@ -1,0 +1,251 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * vivo iQOO 9T (I2201 / PD2217F, SM8475 "Cape")
+ *
+ * Board description derived from the device's own merged device tree
+ * (DTB/live/live_fdt.dtb in the bootloader-unlock repository), not from
+ * vendor .dts sources.  Only what is needed to reach a working UFS root
+ * and a USB peripheral (gadget) console is enabled for now.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/clock/qcom,gcc-sm8450.h>
+#include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+
+#include "sm8450.dtsi"
+#include "pm8350.dtsi"
+#include "pm8350b.dtsi"
+#include "pm8350c.dtsi"
+#include "pm8450.dtsi"
+#include "pmk8350.dtsi"
+#include "pmr735a.dtsi"
+#include "pmr735b.dtsi"
+
+/ {
+	model = "vivo iQOO 9T (I2201)";
+	compatible = "qcom,sm8475-iqoo9t", "qcom,sm8450";
+	chassis-type = "handset";
+
+	aliases {
+		serial0 = &uart7;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+
+		/*
+		 * ABL leaves its boot splash on the panel and the carveout
+		 * untouched, so simpledrm can keep it scanning out and give
+		 * us a text console without any panel/DSI driver.
+		 */
+		framebuffer {
+			compatible = "simple-framebuffer";
+			memory-region = <&cont_splash>;
+			width = <1080>;
+			height = <2400>;
+			stride = <4320>;
+			format = "a8r8g8b8";
+		};
+	};
+
+	/*
+	 * Blind-boot insurance: there is no reachable UART and the USB gadget
+	 * console only exists once DWC3 probes.  Park pstore at the start of
+	 * the (unused by us) continuous-splash carveout so a panic from the
+	 * previous boot can be read on the next one.
+	 */
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		cont_splash: splash@b8000000 {
+			reg = <0 0xb8000000 0 0x2b00000>;
+			no-map;
+		};
+
+		ramoops@ba000000 {
+			compatible = "ramoops";
+			reg = <0 0xba000000 0 0x200000>;
+			record-size = <0x20000>;
+			console-size = <0x100000>;
+			pmsg-size = <0x80000>;
+		};
+	};
+
+	vph_pwr: vph-pwr-regulator {
+		compatible = "regulator-fixed";
+		regulator-name = "vph_pwr";
+		regulator-min-microvolt = <3700000>;
+		regulator-max-microvolt = <3700000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+};
+
+&apps_rsc {
+	regulators-0 {
+		compatible = "qcom,pm8350-rpmh-regulators";
+		qcom,pmic-id = "b";
+
+		vdd-s1-supply = <&vph_pwr>;
+		vdd-s2-supply = <&vph_pwr>;
+		vdd-s3-supply = <&vph_pwr>;
+		vdd-s4-supply = <&vph_pwr>;
+		vdd-s5-supply = <&vph_pwr>;
+		vdd-s6-supply = <&vph_pwr>;
+		vdd-s7-supply = <&vph_pwr>;
+		vdd-s8-supply = <&vph_pwr>;
+		vdd-s9-supply = <&vph_pwr>;
+		vdd-s10-supply = <&vph_pwr>;
+		vdd-s11-supply = <&vph_pwr>;
+		vdd-s12-supply = <&vph_pwr>;
+
+		vdd-l1-l4-supply = <&vreg_s11b_0p95>;
+		vdd-l2-l7-supply = <&vreg_bob>;
+		vdd-l3-l5-supply = <&vreg_bob>;
+		vdd-l6-l9-l10-supply = <&vreg_s12b_1p25>;
+
+		vreg_s11b_0p95: smps11 {
+			regulator-name = "vreg_s11b_0p95";
+			regulator-min-microvolt = <848000>;
+			regulator-max-microvolt = <1104000>;
+		};
+
+		vreg_s12b_1p25: smps12 {
+			regulator-name = "vreg_s12b_1p25";
+			regulator-min-microvolt = <1224000>;
+			regulator-max-microvolt = <1400000>;
+		};
+
+		/* UFS PHY vdda-phy (0.88 V) */
+		vreg_l5b_0p88: ldo5 {
+			regulator-name = "vreg_l5b_0p88";
+			regulator-min-microvolt = <880000>;
+			regulator-max-microvolt = <888000>;
+			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+
+		/* UFS vcc (2.95 V) */
+		vreg_l7b_2p95: ldo7 {
+			regulator-name = "vreg_l7b_2p95";
+			regulator-min-microvolt = <2952000>;
+			regulator-max-microvolt = <2952000>;
+			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+
+		/* UFS vccq / vdd-hba (1.2 V) */
+		vreg_l9b_1p2: ldo9 {
+			regulator-name = "vreg_l9b_1p2";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+	};
+
+	regulators-1 {
+		compatible = "qcom,pm8350c-rpmh-regulators";
+		qcom,pmic-id = "c";
+
+		vdd-s1-supply = <&vph_pwr>;
+		vdd-s2-supply = <&vph_pwr>;
+		vdd-s3-supply = <&vph_pwr>;
+		vdd-s4-supply = <&vph_pwr>;
+		vdd-s5-supply = <&vph_pwr>;
+		vdd-s6-supply = <&vph_pwr>;
+		vdd-s7-supply = <&vph_pwr>;
+		vdd-s8-supply = <&vph_pwr>;
+		vdd-s9-supply = <&vph_pwr>;
+		vdd-s10-supply = <&vph_pwr>;
+
+		vdd-l1-l12-supply = <&vreg_bob>;
+		vdd-l2-l8-supply = <&vreg_bob>;
+		vdd-l3-l4-l5-l7-l13-supply = <&vreg_bob>;
+		vdd-l6-l9-l11-supply = <&vreg_bob>;
+
+		vdd-bob-supply = <&vph_pwr>;
+
+		vreg_bob: bob {
+			regulator-name = "vreg_bob";
+			regulator-min-microvolt = <3008000>;
+			regulator-max-microvolt = <3960000>;
+			regulator-initial-mode = <RPMH_REGULATOR_MODE_AUTO>;
+		};
+
+		/* UFS PHY vdda-pll and eUSB2 PHY vdda12 (1.2 V) */
+		vreg_l10c_1p2: ldo10 {
+			regulator-name = "vreg_l10c_1p2";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+	};
+};
+
+/* UFS: lion's share of the board file is here because root is on it. */
+&ufs_mem_hc {
+	status = "okay";
+
+	reset-gpios = <&tlmm 210 GPIO_ACTIVE_LOW>;
+
+	vcc-supply = <&vreg_l7b_2p95>;
+	vcc-max-microamp = <1100000>;
+	vccq-supply = <&vreg_l9b_1p2>;
+	vccq-max-microamp = <1200000>;
+	vdd-hba-supply = <&vreg_l9b_1p2>;
+	qcom,vddp-ref-clk-supply = <&vreg_l9b_1p2>;
+	qcom,vddp-ref-clk-max-microamp = <100>;
+};
+
+&ufs_mem_phy {
+	/*
+	 * Cape/SM8475 moves the UFS PHY to 0x1d80000 and needs the SM8475
+	 * (HS-G4 capable) programming, not Waipio's 0x1d87000 layout.
+	 */
+	compatible = "qcom,sm8475-qmp-ufs-phy";
+	reg = <0 0x01d80000 0 0x2000>;
+
+	status = "okay";
+
+	vdda-phy-supply = <&vreg_l5b_0p88>;
+	vdda-pll-supply = <&vreg_l10c_1p2>;
+};
+
+/*
+ * SM8475 ("Cape") uses the SNPS eUSB2 HS PHY at the same address where
+ * SM8450 ("Waipio") has the 7nm HS PHY, with the same rails the vendor
+ * DT uses (vdd = pm8350_l5, vdda12 = pm8350c_l10).
+ */
+&usb_1_hsphy {
+	compatible = "qcom,usb-snps-eusb2-phy";
+	reg = <0 0x088e3000 0 0x154>;
+
+	/* Vendor DT: GCC_EUSB3_0_CLKREF_EN is the PHY's 19.2 MHz reference. */
+	clocks = <&gcc GCC_EUSB3_0_CLKREF_EN>;
+	clock-names = "ref";
+
+	vdd-supply = <&vreg_l5b_0p88>;
+	vdda12-supply = <&vreg_l10c_1p2>;
+
+	status = "okay";
+};
+
+/*
+ * USB is high-speed only on this board (the vendor DT even disables the
+ * USB3/DP combo PHY and points the controller at usb-nop-xceiv), so keep
+ * the HS PHY only and force peripheral role: no Type-C/role-switch driver
+ * is available yet.
+ */
+&usb_1 {
+	status = "okay";
+
+	phys = <&usb_1_hsphy>;
+	phy-names = "usb2-phy";
+
+	/delete-property/ usb-role-switch;
+
+	dr_mode = "peripheral";
+	maximum-speed = "high-speed";
+};
