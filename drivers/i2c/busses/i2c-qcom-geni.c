@@ -1283,6 +1283,7 @@ MODULE_DEVICE_TABLE(acpi, geni_i2c_acpi_match);
 
 static const struct of_device_id geni_i2c_dt_match[] = {
 	{ .compatible = "qcom,geni-i2c", .data = &geni_i2c },
+	{ .compatible = "qcom,i2c-geni", .data = &geni_i2c },
 	{ .compatible = "qcom,geni-i2c-master-hub", .data = &i2c_master_hub },
 	{}
 };

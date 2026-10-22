@@ -924,13 +924,11 @@ int geni_icc_get(struct geni_se *se, const char *icc_ddr)
 
 	icc_paths[GENI_TO_CORE].path = devm_of_icc_get(se->dev, "qup-core");
 	if (IS_ERR(icc_paths[GENI_TO_CORE].path))
-		return dev_err_probe(se->dev, PTR_ERR(icc_paths[GENI_TO_CORE].path),
-				     "Failed to get 'qup-core' ICC path\n");
+		icc_paths[GENI_TO_CORE].path = NULL;
 
 	icc_paths[CPU_TO_GENI].path = devm_of_icc_get(se->dev, "qup-config");
 	if (IS_ERR(icc_paths[CPU_TO_GENI].path))
-		return dev_err_probe(se->dev, PTR_ERR(icc_paths[CPU_TO_GENI].path),
-				     "Failed to get 'qup-config' ICC path\n");
+		icc_paths[CPU_TO_GENI].path = NULL;
 
 	/* The DDR path is optional, depending on protocol and hw capabilities */
 	icc_paths[GENI_TO_DDR].path = devm_of_icc_get(se->dev, "qup-memory");
@@ -1668,6 +1666,7 @@ static const struct geni_se_desc i2c_master_hub_desc = {
 
 static const struct of_device_id geni_se_dt_match[] = {
 	{ .compatible = "qcom,geni-se-qup", .data = &qup_desc },
+	{ .compatible = "qcom,qupv3-geni-se", .data = &qup_desc },
 	{ .compatible = "qcom,geni-se-i2c-master-hub", .data = &i2c_master_hub_desc },
 	{ .compatible = "qcom,sa8255p-geni-se-qup", .data = &sa8255p_qup_desc },
 	{}

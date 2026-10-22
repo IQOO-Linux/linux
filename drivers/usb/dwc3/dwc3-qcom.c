@@ -172,15 +172,16 @@ static int dwc3_qcom_interconnect_init(struct dwc3_qcom *qcom)
 
 	qcom->icc_path_ddr = of_icc_get(dev, "usb-ddr");
 	if (IS_ERR(qcom->icc_path_ddr)) {
-		return dev_err_probe(dev, PTR_ERR(qcom->icc_path_ddr),
-				     "failed to get usb-ddr path\n");
+		dev_warn(dev, "no usable usb-ddr interconnect path (%ld), ignoring\n",
+			 PTR_ERR(qcom->icc_path_ddr));
+		qcom->icc_path_ddr = NULL;
 	}
 
 	qcom->icc_path_apps = of_icc_get(dev, "apps-usb");
 	if (IS_ERR(qcom->icc_path_apps)) {
-		ret = dev_err_probe(dev, PTR_ERR(qcom->icc_path_apps),
-				    "failed to get apps-usb path\n");
-		goto put_path_ddr;
+		dev_warn(dev, "no usable apps-usb interconnect path (%ld), ignoring\n",
+			 PTR_ERR(qcom->icc_path_apps));
+		qcom->icc_path_apps = NULL;
 	}
 
 	max_speed = usb_get_maximum_speed(qcom->dwc.dev);
@@ -840,6 +841,7 @@ static const struct dev_pm_ops dwc3_qcom_dev_pm_ops = {
 
 static const struct of_device_id dwc3_qcom_of_match[] = {
 	{ .compatible = "qcom,snps-dwc3" },
+	{ .compatible = "qcom,dwc-usb3-msm" },
 	{ }
 };
 MODULE_DEVICE_TABLE(of, dwc3_qcom_of_match);

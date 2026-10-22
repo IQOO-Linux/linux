@@ -12,6 +12,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/clock/qcom,gcc-sm8450.h>
+#include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
 
 #include "sm8450.dtsi"
@@ -31,28 +32,19 @@
 	/* ABL matches the vendor_boot FDT against these; without them it
 	 * refuses to boot the image (straight back to fastboot). */
 	qcom,msm-id = <0x21c 0x10000 0x212 0x10000>;
-	qcom,board-id = <0x1000b 0x67>;
+	qcom,board-id = <0x00 0x00>;
 
 	aliases {
 		serial0 = &uart7;
 	};
 
 	chosen {
+		/* Needed so the 64-bit reg in framebuffer parses correctly */
+		#address-cells = <2>;
+		#size-cells = <2>;
+
 		stdout-path = "serial0:115200n8";
 
-		/*
-		 * ABL leaves its boot splash on the panel and the carveout
-		 * untouched, so simpledrm can keep it scanning out and give
-		 * us a text console without any panel/DSI driver.
-		 */
-		framebuffer {
-			compatible = "simple-framebuffer";
-			reg = <0 0xb8000000 0 0x2b00000>;
-			width = <1080>;
-			height = <2400>;
-			stride = <4320>;
-			format = "a8r8g8b8";
-		};
 	};
 
 	/*
@@ -129,6 +121,13 @@
 		vdd-l3-l5-supply = <&vreg_bob>;
 		vdd-l6-l9-l10-supply = <&vreg_s12b_1p25>;
 
+		/* eUSB2 repeater 1.8 V rail */
+		vreg_s10b_1p8: smps10 {
+			regulator-name = "vreg_s10b_1p8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+		};
+
 		vreg_s11b_0p95: smps11 {
 			regulator-name = "vreg_s11b_0p95";
 			regulator-min-microvolt = <848000>;
@@ -162,6 +161,14 @@
 			regulator-name = "vreg_l9b_1p2";
 			regulator-min-microvolt = <1200000>;
 			regulator-max-microvolt = <1200000>;
+			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
+		};
+
+		/* eUSB2 repeater 3.07 V rail */
+		vreg_l2b_3p07: ldo2 {
+			regulator-name = "vreg_l2b_3p07";
+			regulator-min-microvolt = <3072000>;
+			regulator-max-microvolt = <3300000>;
 			regulator-initial-mode = <RPMH_REGULATOR_MODE_HPM>;
 		};
 	};
@@ -207,7 +214,7 @@
 
 /* UFS: lion's share of the board file is here because root is on it. */
 &ufs_mem_hc {
-	status = "okay";
+	status = "disabled"; /* TEST: UFS probe hang? */
 
 	reset-gpios = <&tlmm 210 GPIO_ACTIVE_LOW>;
 
@@ -221,6 +228,7 @@
 };
 
 &ufs_mem_phy {
+	status = "disabled"; /* TEST */
 	/*
 	 * Cape/SM8475 moves the UFS PHY to 0x1d80000 and needs the SM8475
 	 * (HS-G4 capable) programming, not Waipio's 0x1d87000 layout.
@@ -269,4 +277,43 @@
 
 	dr_mode = "peripheral";
 	maximum-speed = "high-speed";
+};
+
+/*
+ * USB2 on this board runs through an external eUSB2 repeater on I2C5 at
+ * address 0x4f.  The vendor DT feeds it from PM8350 S10 (1.8 V) and L2
+ * (~3.07 V) and releases it through PM8350C GPIO7.
+ */
+&i2c5 {
+	status = "okay";
+	clock-frequency = <400000>;
+
+/* TEST: repeater node removed; I2C5 stays enabled */
+};
+
+&pm8350c_gpios {
+	eusb2_reset_ctrl: eusb2-reset-ctrl-state {
+		pins = "gpio7";
+		function = PMIC_GPIO_FUNC_NORMAL;
+		output-enable;
+		bias-disable;
+		power-source = <1>;
+		qcom,drive-strength = <PMIC_GPIO_STRENGTH_HIGH>;
+	};
+};
+
+/*
+ * ABL keeps scanning out its splash from the reserved carveout.  Park a
+ * simple-framebuffer there so simpledrm gives us an fbcon console without
+ * any panel/DSI driver.  Must live under /soc: ABL rebuilds /chosen.
+ */
+&soc {
+	framebuffer@b8000000 {
+		compatible = "simple-framebuffer";
+		reg = <0 0xb8000000 0 0x2b00000>;
+		width = <1080>;
+		height = <2400>;
+		stride = <4320>;
+		format = "a8r8g8b8";
+	};
 };
